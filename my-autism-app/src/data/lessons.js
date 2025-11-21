@@ -54,6 +54,17 @@ export const lessonData = {
       }
     ],
 
+    emotion_training: [
+      {
+        id: 1,
+        targetEmotion: 'Vui vẻ',
+        guideImage: "https://img.freepik.com/free-photo/portrait-young-happy-boy-smiling_23-2148156759.jpg",
+        guideText: "Hãy cười thật tươi như bạn này nhé!",
+        successMessage: "Tuyệt vời! Con cười rất đẹp!",
+        tips: "Hãy mở miệng rộng và nâng khóe môi lên cao nhé!"
+      }
+    ],
+
     ai: [
       {
         id: 1,
@@ -118,6 +129,17 @@ export const lessonData = {
       }
     ],
 
+    emotion_training: [
+      {
+        id: 1,
+        targetEmotion: 'Vui vẻ',
+        guideImage: "https://img.freepik.com/free-photo/portrait-young-happy-boy-smiling_23-2148156759.jpg",
+        guideText: "Hãy cười thật tươi như bạn này nhé!",
+        successMessage: "Tuyệt vời! Con cười rất đẹp!",
+        tips: "Hãy mở miệng rộng và nâng khóe môi lên cao nhé!"
+      }
+    ],
+
     ai: [
       {
         id: 1,
@@ -179,6 +201,17 @@ export const lessonData = {
         question: "Bạn ấy sẽ cảm thấy sao nhỉ?",
         options: ["Vui vẻ", "Buồn bã"],
         correct: "Buồn bã"
+      }
+    ],
+
+    emotion_training: [
+      {
+        id: 1,
+        targetEmotion: 'happy', // Cảm xúc mục tiêu
+        guideImage: "https://img.freepik.com/free-vector/happy-girl-cartoon-character_1308-133445.jpg", // Ảnh/GIF hướng dẫn
+        guideText: "Con hãy cười thật tươi giống bạn này nhé! 😄",
+        successMessage: "Nụ cười của con tỏa nắng quá!",
+        tips: "Hãy nhe răng ra một chút nữa nào."
       }
     ],
 
