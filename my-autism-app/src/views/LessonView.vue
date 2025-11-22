@@ -8,7 +8,7 @@
       </button>
 
       <div class="flex-1 bg-slate-200 h-5 rounded-full overflow-hidden relative shadow-inner">
-        <div class="bg-green-500 h-full transition-all duration-500 ease-out relative"
+        <div class="bg-emerald-400 h-full transition-all duration-500 ease-out relative"
           :style="{ width: progress + '%' }">
           <div class="absolute top-1 left-0 w-full h-1 bg-white/30 rounded-full"></div>
         </div>
@@ -38,13 +38,13 @@
 
       <div v-if="isCompleted" class="text-center animate-bounce-in z-50">
         <div
-          class="w-32 h-32 bg-yellow-400 rounded-full flex items-center justify-center text-6xl text-white mx-auto mb-6 shadow-xl border-4 border-yellow-200">
+          class="w-32 h-32 bg-amber-300 rounded-full flex items-center justify-center text-6xl text-white mx-auto mb-6 shadow-xl border-4 border-amber-100">
           🏆
         </div>
-        <h2 class="text-3xl font-bold text-yellow-600 mb-2">Tuyệt vời!</h2>
+        <h2 class="text-3xl font-bold text-amber-500 mb-2">Tuyệt vời!</h2>
         <p class="text-slate-500 mb-8">Con đã hoàn thành bài học này.</p>
         <button @click="goBack"
-          class="bg-blue-500 hover:bg-blue-600 text-white px-12 py-4 rounded-2xl font-bold text-xl shadow-lg active:scale-95 transition">
+          class="bg-sky-400 hover:bg-sky-500 text-white px-12 py-4 rounded-2xl font-bold text-xl shadow-lg active:scale-95 transition">
           Về bản đồ
         </button>
       </div>
