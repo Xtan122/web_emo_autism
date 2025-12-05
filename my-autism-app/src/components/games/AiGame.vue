@@ -97,9 +97,23 @@ import { ref, onMounted, onUnmounted, computed } from 'vue';
 const props = defineProps(['data']);
 const emit = defineEmits(['next']);
 
-// Dữ liệu giả lập
+// WebSocket & AI connection
+const WS_URL = 'ws://localhost:8000/ws';
+let ws = null;
+let canvasCtx = null;
+
+// Dữ liệu cảm xúc từ AI
 const mockStats = ref({
-  happy: 10, sad: 5, fear: 5, angry: 5, surprised: 5, disgust: 5
+  happy: 0, sad: 0, fear: 0, angry: 0, surprised: 0, disgust: 0
+});
+
+// Thông tin phát hiện
+const aiData = ref({
+  found: false,
+  is_owner: false,
+  emotion: 'neutral',
+  confidence: 0.0,
+  box: []
 });
 
 let intervalTimer = null;
@@ -123,29 +137,110 @@ const getLabel = (key) => {
   return map[key];
 };
 
+// Kết nối WebSocket
+const connectWebSocket = () => {
+  try {
+    ws = new WebSocket(WS_URL);
+    
+    ws.onopen = () => {
+      console.log('✅ WebSocket connected to AI server');
+    };
+    
+    ws.onmessage = (event) => {
+      try {
+        const result = JSON.parse(event.data);
+        aiData.value = result;
+        
+        // Cập nhật stats từ AI
+        if (result.found && result.emotion && result.emotion !== 'neutral') {
+          const emotion = result.emotion;
+          const confidence = Math.round((result.confidence || 0) * 100);
+          
+          // Làm mượt animation: giảm dần các giá trị cũ
+          Object.keys(mockStats.value).forEach(key => {
+            mockStats.value[key] = Math.max(0, mockStats.value[key] * 0.85);
+          });
+          
+          // Set giá trị mới cho cảm xúc hiện tại
+          if (mockStats.value.hasOwnProperty(emotion)) {
+            mockStats.value[emotion] = Math.min(100, confidence);
+          }
+        }
+      } catch (e) {
+        console.error('Error parsing AI response:', e);
+      }
+    };
+    
+    ws.onerror = (error) => {
+      console.error('❌ WebSocket error:', error);
+    };
+    
+    ws.onclose = () => {
+      console.log('🔌 WebSocket disconnected');
+    };
+  } catch (error) {
+    console.error('Failed to connect WebSocket:', error);
+  }
+};
+
+// Gửi frame đến AI server
+const sendFrameToAI = (videoEl) => {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  
+  const canvas = document.createElement('canvas');
+  canvas.width = videoEl.videoWidth;
+  canvas.height = videoEl.videoHeight;
+  canvasCtx = canvas.getContext('2d');
+  
+  canvasCtx.drawImage(videoEl, 0, 0);
+  
+  canvas.toBlob((blob) => {
+    if (blob) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64data = reader.result;
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(base64data);
+        }
+      };
+      reader.readAsDataURL(blob);
+    }
+  }, 'image/jpeg', 0.8);
+};
+
 // Lifecycle
 onMounted(() => {
   const videoEl = document.getElementById('user-camera');
+  
   if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
     navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
-      if(videoEl) videoEl.srcObject = stream;
+      if(videoEl) {
+        videoEl.srcObject = stream;
+        
+        // Đợi video sẵn sàng rồi kết nối AI
+        videoEl.onloadedmetadata = () => {
+          connectWebSocket();
+          
+          // Gửi frame mỗi 100ms (10 FPS)
+          intervalTimer = setInterval(() => {
+            sendFrameToAI(videoEl);
+          }, 100);
+        };
+      }
     }).catch(e => console.log("Lỗi camera:", e));
   }
-
-  intervalTimer = setInterval(() => {
-    mockStats.value = {
-      happy: Math.floor(Math.random() * 40) + 10,
-      sad: Math.floor(Math.random() * 20),
-      fear: Math.floor(Math.random() * 10),
-      angry: Math.floor(Math.random() * 10),
-      surprised: Math.floor(Math.random() * 30) + 5,
-      disgust: Math.floor(Math.random() * 10)
-    };
-  }, 800);
 });
 
 onUnmounted(() => {
   if(intervalTimer) clearInterval(intervalTimer);
+  
+  // Đóng WebSocket
+  if (ws) {
+    ws.close();
+    ws = null;
+  }
+  
+  // Tắt camera
   const videoEl = document.getElementById('user-camera');
   if (videoEl && videoEl.srcObject) {
     videoEl.srcObject.getTracks().forEach(t => t.stop());
