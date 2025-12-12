@@ -13,15 +13,28 @@
         <form @submit.prevent="handleLogin" class="space-y-6">
           <div>
             <label class="block text-slate-600 font-bold mb-2">Email phụ huynh</label>
-            <input type="email"
+            <!-- 👇 THÊM v-model="email" VÀO ĐÂY 👇 -->
+            <input 
+              v-model="email" 
+              type="email"
+              required
               class="w-full px-4 py-3 rounded-xl border-2 border-rose-100 focus:border-rose-300 focus:outline-none transition"
               placeholder="vi-du@gmail.com">
           </div>
           <div>
             <label class="block text-slate-600 font-bold mb-2">Mật khẩu</label>
-            <input type="password"
+            <!-- 👇 THÊM v-model="password" VÀO ĐÂY 👇 -->
+            <input 
+              v-model="password" 
+              type="password"
+              required
               class="w-full px-4 py-3 rounded-xl border-2 border-rose-100 focus:border-rose-300 focus:outline-none transition"
               placeholder="••••••••">
+          </div>
+
+          <!-- Hiển thị lỗi nếu có -->
+          <div v-if="errorMessage" class="text-red-500 text-sm text-center">
+            {{ errorMessage }}
           </div>
 
           <button type="submit"
@@ -43,11 +56,37 @@
 </template>
 
 <script setup>
+import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-const router = useRouter();
+import axios from 'axios';
 
-const handleLogin = () => {
-  // Giả lập đăng nhập thành công
-  router.push('/app');
+const router = useRouter();
+const email = ref('');    
+const password = ref(''); 
+const errorMessage = ref('');
+
+const handleLogin = async () => {
+  // Xóa thông báo lỗi cũ trước khi gửi mới
+  errorMessage.value = '';
+
+  try {
+    const response = await axios.post('http://localhost:3000/api/auth/login', {
+      email: email.value,
+      password: password.value
+    });
+
+    if (response.data.token) {
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+      alert('Đăng nhập thành công!'); // Thông báo nhẹ
+      router.push('/app');
+    }
+  } catch (error) {
+    if (error.response && error.response.data) {
+        errorMessage.value = error.response.data.message;
+    } else {
+        errorMessage.value = 'Không thể kết nối đến Server';
+    }
+  }
 }
 </script>

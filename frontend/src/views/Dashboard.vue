@@ -242,13 +242,16 @@ const store = useProgressStore();
 const starBump = ref(false);
 
 onMounted(() => {
-  setTimeout(() => {
-    const currentEl = document.getElementById('current-lesson-node');
-    if (currentEl) {
-      // Tự động cuộn đến bài học hiện tại
-      currentEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  }, 300);
+    // 🔥 GỌI HÀM LẤY DỮ LIỆU TỪ API KHI COMPONENT LOAD
+    store.fetchLevelsFromAPI().then(() => {
+        // Sau khi data được tải, cuộn đến bài hiện tại
+        setTimeout(() => {
+            const currentEl = document.getElementById('current-lesson-node');
+            if (currentEl) {
+                currentEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 300);
+    });
 });
 
 const isLevelDone = (level) => level.lessons.flashcard && level.lessons.matching && level.lessons.context && level.lessons.emotion_training && level.lessons.ai;
