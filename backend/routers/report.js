@@ -1,10 +1,13 @@
 import express from 'express';
 import { getUserReport } from '../controllers/reportController.js';
-import verifyToken from '../middleware/authMiddleware.js'; // Import middleware
+
+import verifyToken from '../middleware/authMiddleware.js'; 
 
 const router = express.Router();
 
-// Thêm verifyToken để bảo vệ trang báo cáo
+// @route   GET /api/report
+// @desc    Lấy báo cáo chi tiết
+// @access  Private
 router.get('/', verifyToken, getUserReport);
 
 export default router;

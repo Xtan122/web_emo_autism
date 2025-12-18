@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import axios from 'axios';
-import { useRouter } from 'vue-router'; // Import Router để chuyển trang
+import { useRouter } from 'vue-router'; 
 
 export const useProgressStore = defineStore('progress', () => {
   const router = useRouter();
@@ -10,14 +10,15 @@ export const useProgressStore = defineStore('progress', () => {
   const stars = ref(0);
   const currentStreak = ref(0);
   const levels = ref([]);
-  const isLoading = ref(false); // Thêm biến loading state
+  const isLoading = ref(false); 
 
   // State riêng cho Report
   const reportData = ref({
     accuracy: 0,
     dominantEmotion: '...',
-    radarData: [0, 0, 0, 0, 0, 0], 
-    skillData: [], // Dữ liệu kỹ năng (Flashcard, Matching...)
+    // 🔥 SỬA: Để mảng rỗng để hứng dữ liệu object {label, score} từ API
+    radarData: [], 
+    skillData: [], 
     recentLogs: []
   });
 
@@ -29,13 +30,11 @@ export const useProgressStore = defineStore('progress', () => {
 
   // --- ACTIONS ---
 
-  // 1. Hàm LOGOUT (Bổ sung để sửa lỗi)
+  // 1. Hàm LOGOUT
   function logout() {
-      // Xóa token
       localStorage.removeItem('token');
       localStorage.removeItem('user_info');
       
-      // Reset state về mặc định
       stars.value = 0;
       currentStreak.value = 0;
       reportData.value = { 
@@ -46,12 +45,10 @@ export const useProgressStore = defineStore('progress', () => {
           recentLogs: [] 
       };
 
-      // Chuyển về trang login
-      // Dùng window.location để refresh lại app cho sạch state
       window.location.href = '/login';
   }
 
-  // 2. Lấy Map
+  // 2. Lấy Map (Danh sách bài học)
   async function fetchLevelsFromAPI() {
     try {
         const token = localStorage.getItem('token');
@@ -64,9 +61,9 @@ export const useProgressStore = defineStore('progress', () => {
     }
   }
 
-  // 3. Lấy dữ liệu Báo cáo (Đã thêm xử lý Loading)
+  // 3. Lấy dữ liệu Báo cáo
   async function fetchReportData() {
-    isLoading.value = true; // Bắt đầu tải
+    isLoading.value = true; 
     try {
         const token = localStorage.getItem('token');
         if (!token) {
@@ -85,35 +82,42 @@ export const useProgressStore = defineStore('progress', () => {
         
         reportData.value.accuracy = data.stats.accuracy;
         reportData.value.dominantEmotion = data.stats.dominantEmotion;
-        reportData.value.radarData = data.radar;
-        reportData.value.skillData = data.skills; // Dữ liệu kỹ năng
+        
+        // Dữ liệu Radar (Mảng object: [{label: 'Level 1', score: 100}, ...])
+        reportData.value.radarData = data.radar; 
+        
+        // Dữ liệu Kỹ năng (Mảng object: [{code: 'FLASHCARD', score: 80}, ...])
+        reportData.value.skillData = data.skills; 
+        
         reportData.value.recentLogs = data.logs;
 
     } catch (error) {
         console.error("Lỗi tải báo cáo:", error);
-        // Nếu token hết hạn (401), tự động logout
         if (error.response && error.response.status === 401) {
             logout();
         }
     } finally {
-        isLoading.value = false; // Kết thúc tải (quan trọng để tắt spinner)
+        isLoading.value = false; 
     }
   }
 
-  // 4. Logic Check Khóa
+  // 4. Logic Check Khóa bài học
   function isLessonLocked(levelId, lessonType) {
     const level = levels.value.find(l => l.id == levelId);
     if (!level) return true;
     if (level.locked) return true;
 
+    // Thứ tự bài học bắt buộc
     const lessonOrder = ['flashcard', 'matching', 'context', 'emotion_training', 'ai'];
     const typeIndex = lessonOrder.indexOf(lessonType);
 
-    if (typeIndex === 0) return false; 
-    const prevType = lessonOrder[typeIndex - 1];
+    if (typeIndex === 0) return false; // Bài đầu tiên luôn mở nếu level mở
     
+    // Kiểm tra bài trước đó đã xong chưa
+    const prevType = lessonOrder[typeIndex - 1];
     if (!level.lessons) return true;
-    return !level.lessons[prevType];
+    
+    return !level.lessons[prevType]; // Nếu bài trước chưa xong -> Khóa bài này
   }
 
   function addStars(count) {
@@ -142,7 +146,6 @@ export const useProgressStore = defineStore('progress', () => {
       }
   }
 
-  // 🔥 Đừng quên export logout ở đây
   return { 
     stars, currentStreak, levels, userInfo, reportData, isLoading,
     fetchLevelsFromAPI, fetchReportData, isLessonLocked, claimChest, logout, addStars
