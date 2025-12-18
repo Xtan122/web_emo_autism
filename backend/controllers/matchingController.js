@@ -19,9 +19,8 @@ export const getMatchingCards = async (req, res) => {
             FROM matching_card mc
             JOIN media_asset m ON mc.image_id = m.id
             JOIN emotion e ON mc.emotion_id = e.id
-            -- LỌC THEO emotion_group_id (LEVEL)
             WHERE mc.emotion_group_id = ? 
-            ORDER BY RAND();
+            ORDER BY mc.id ASC; 
         `;
 
         const [rows] = await db.query(query, [level]);

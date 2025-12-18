@@ -1,45 +1,42 @@
 <template>
-  <div class="w-full max-w-3xl mx-auto text-center py-4">
+  <div class="w-full max-w-4xl mx-auto text-center py-4">
     
-    <h2 class="text-2xl md:text-3xl font-bold text-slate-700 mb-2 animate-bounce-slow">
-      Tìm cặp giống nhau 🧩
-    </h2>
-    <p class="text-slate-500 mb-8">Lật 2 thẻ để xem hình bên dưới nhé!</p>
+    <div class="mb-4">
+        <h2 class="text-2xl md:text-3xl font-bold text-slate-700 mb-2 animate-bounce-slow">
+        Tìm cặp giống nhau 🧩
+        </h2>
+        <p class="text-blue-500 font-bold text-lg">
+            Vòng {{ currentRoundIndex + 1 }} / {{ rounds.length }}
+        </p>
+    </div>
 
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 perspective-container">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 p-4 min-h-[300px]">
       
-      <div 
-        v-for="card in shuffledCards" 
-        :key="card.uuid"
-        class="aspect-square relative cursor-pointer group"
-        @click="flipCard(card)"
-      >
-        <div :class="['flip-card-inner w-full h-full transition-transform duration-500 transform-style-3d', 
-             card.isFlipped || card.isMatched ? 'rotate-y-180' : '']">
-          
-          <div class="flip-card-front absolute w-full h-full backface-hidden rounded-2xl shadow-lg border-b-8 border-blue-600 bg-blue-400 hover:bg-blue-300 flex items-center justify-center transition-colors">
-             <span class="text-5xl font-bold text-white opacity-50">?</span>
-          </div>
+      <TransitionGroup name="list">
+        <div 
+            v-for="card in activeCards" 
+            :key="card.uuid"
+            class="aspect-square relative cursor-pointer transition-all duration-300 rounded-2xl overflow-hidden shadow-md border-4"
+            :class="getCardClass(card)"
+            @click="selectCard(card)"
+        >
+            <img :src="card.image" class="w-full h-full object-cover" />
+            
+            <div v-if="card.isMatched" class="absolute inset-0 bg-white/60 flex items-center justify-center">
+                <i class="fas fa-check-circle text-green-500 text-5xl drop-shadow-lg animate-scale-in"></i>
+            </div>
 
-          <div :class="['flip-card-back absolute w-full h-full backface-hidden rounded-2xl shadow-lg border-4 flex items-center justify-center rotate-y-180 bg-white overflow-hidden',
-               card.isMatched ? 'border-green-400 ring-4 ring-green-200' : 'border-blue-200']">
-             
-             <img :src="card.image" class="w-full h-full object-cover p-2" alt="Card Image" />
-             
-             <div v-if="card.isMatched" class="absolute inset-0 bg-green-500/20 flex items-center justify-center animate-pulse">
-               <i class="fas fa-check text-4xl text-green-600 drop-shadow-md"></i>
-             </div>
-          </div>
-
+            <div v-if="card.isError" class="absolute inset-0 border-4 border-red-500 rounded-xl animate-shake"></div>
         </div>
-      </div>
+      </TransitionGroup>
 
     </div>
 
-    <div v-if="isAllMatched" class="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
-      <div class="bg-yellow-400 text-white text-4xl font-bold px-10 py-6 rounded-3xl shadow-2xl border-4 border-white animate-bounce-in">
-        Xuất sắc! 🎉
-      </div>
+    <div class="mt-8 flex justify-center gap-2">
+      <span v-for="n in totalPairs" :key="n" 
+            class="w-3 h-3 rounded-full transition-all duration-500"
+            :class="n <= totalCorrectMatches ? 'bg-green-500 scale-125' : 'bg-slate-200'">
+      </span>
     </div>
 
   </div>
@@ -51,107 +48,190 @@ import { ref, onMounted, computed } from 'vue';
 const props = defineProps(['data']); 
 const emit = defineEmits(['next']);
 
-const shuffledCards = ref([]);
-const selectedCards = ref([]);
-const isProcessing = ref(false); // Khóa click khi đang chờ úp bài
+// State quản lý vòng chơi
+const rounds = ref([]); // Mảng chứa các mảng con [[card1,2,3,4], [card5,6,7,8]]
+const currentRoundIndex = ref(0);
 
-// Helper: Trộn mảng ngẫu nhiên
-const shuffleArray = (array) => {
-  return array.sort(() => Math.random() - 0.5);
-};
+const selectedCards = ref([]);
+const isProcessing = ref(false);
+
+// Stats toàn cục
+const totalAttempts = ref(0);
+const totalCorrectMatches = ref(0);
+
+// Helper tạo ID
+const generateUUID = () => Math.random().toString(36).substring(2, 15);
+
+// Tính tổng số cặp trong toàn bộ bài (để hiển thị dot)
+const totalPairs = computed(() => {
+    return rounds.value.reduce((acc, round) => acc + (round.length / 2), 0);
+});
+
+// Lấy danh sách thẻ của vòng hiện tại
+const activeCards = computed(() => {
+    return rounds.value[currentRoundIndex.value] || [];
+});
 
 onMounted(() => {
-  if (!props.data || props.data.length === 0) return;
-
-  // Tạo dữ liệu thẻ bài (Nhân bản logic từ data cha hoặc data mẫu)
-  // Lưu ý: props.data truyền vào nên là danh sách các cặp.
-  const cards = props.data.map(c => ({
-    ...c,
-    uuid: Math.random().toString(36).substr(2, 9), // ID duy nhất
-    isFlipped: false,
-    isMatched: false
-  }));
-  
-  shuffledCards.value = shuffleArray(cards);
+  if (props.data && Array.isArray(props.data)) {
+    initGameRounds(props.data);
+  }
 });
 
-const isAllMatched = computed(() => {
-  return shuffledCards.value.length > 0 && shuffledCards.value.every(c => c.isMatched);
-});
+// 1. LOGIC CHIA VÒNG (QUAN TRỌNG)
+const initGameRounds = (rawData) => {
+    // 1. Gán UUID cho từng thẻ trước
+    const allCards = rawData.map(item => ({
+      ...item,
+      uuid: generateUUID(),
+      isMatched: false,
+      isError: false
+    }));
 
-const flipCard = (card) => {
-  // Chặn click nếu: Đang xử lý, Đã lật, Đã ghép đúng
-  if (isProcessing.value || card.isFlipped || card.isMatched) return;
+    // 2. Gom nhóm theo pair_key
+    // Kết quả: { 'VUI_1': [cardA, cardB], 'BUON_1': [cardC, cardD], ... }
+    const pairsMap = {};
+    allCards.forEach(card => {
+        if (!pairsMap[card.pair_key]) {
+            pairsMap[card.pair_key] = [];
+        }
+        pairsMap[card.pair_key].push(card);
+    });
 
-  // 1. Lật thẻ
-  card.isFlipped = true;
+    // Chuyển thành mảng các cặp: [[cardA, cardB], [cardC, cardD], ...]
+    // Lúc này thứ tự vẫn là VUI_1, BUON_1, VUI_2... do Backend đã sort ID
+    const pairsList = Object.values(pairsMap);
+
+    // 3. Tạo vòng chơi: Mỗi vòng lấy đúng 2 cặp (4 thẻ)
+    const chunkedRounds = [];
+    const PAIRS_PER_ROUND = 2; // Số cặp trong 1 vòng (2 cặp = 4 thẻ)
+
+    for (let i = 0; i < pairsList.length; i += PAIRS_PER_ROUND) {
+        // Lấy 2 cặp tiếp theo
+        const currentPairs = pairsList.slice(i, i + PAIRS_PER_ROUND);
+        
+        // Gộp (Flatten) thành 1 mảng các thẻ (4 thẻ)
+        let roundCards = currentPairs.flat();
+        
+        // 🔥 Tráo bài TRONG NỘI BỘ vòng này
+        // Để bé không đoán được vị trí, nhưng đảm bảo 4 thẻ này thuộc về nhau
+        shuffleArray(roundCards);
+        
+        chunkedRounds.push(roundCards);
+    }
+
+    rounds.value = chunkedRounds;
+    currentRoundIndex.value = 0;
+};
+
+const shuffleArray = (array) => {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+};
+
+// ... Các hàm getCardClass, selectCard giữ nguyên logic cũ ...
+
+const getCardClass = (card) => {
+    if (card.isMatched) return 'border-green-400 opacity-80 scale-95 cursor-default grayscale-[0.3]';
+    if (selectedCards.value.find(c => c.uuid === card.uuid)) return 'border-blue-500 ring-4 ring-blue-200 scale-105 z-10';
+    return 'border-white hover:border-blue-200 hover:scale-105';
+};
+
+const selectCard = (card) => {
+  if (isProcessing.value || card.isMatched) return;
+
+  // Bỏ chọn nếu click lại
+  if (selectedCards.value.length === 1 && selectedCards.value[0].uuid === card.uuid) {
+      selectedCards.value = [];
+      return;
+  }
+
   selectedCards.value.push(card);
-  
-  // Play sound lật (nếu có)
-  // playSound('flip');
 
-  // 2. Kiểm tra logic khi đã lật 2 thẻ
   if (selectedCards.value.length === 2) {
-    isProcessing.value = true; // Khóa bàn phím
+    isProcessing.value = true;
+    totalAttempts.value++;
+    checkMatch();
+  }
+};
+
+// 2. LOGIC CHECK MATCH & CHUYỂN VÒNG
+const checkMatch = () => {
     const [card1, card2] = selectedCards.value;
 
-    if (card1.emotion === card2.emotion) {
-      // --- ĐÚNG: MATCH ---
-      setTimeout(() => {
-        card1.isMatched = true;
-        card2.isMatched = true;
-        selectedCards.value = [];
-        isProcessing.value = false;
-        
-        // Play sound match
-        // playSound('correct');
+    // So sánh (dùng pair_key để chính xác nhất, hoặc emotion)
+    // Nếu dùng pair_key thì VUI_1 chỉ khớp VUI_1 (đúng ý bạn)
+    const isMatch = card1.pair_key === card2.pair_key; 
 
-        // Kiểm tra thắng
-        if (isAllMatched.value) {
-           setTimeout(() => emit('next', true), 1500); // Chờ 1.5s để bé tận hưởng chiến thắng
-        }
-      }, 600); // Chờ animation lật xong
+    if (isMatch) {
+        setTimeout(() => {
+            card1.isMatched = true;
+            card2.isMatched = true;
+            totalCorrectMatches.value++;
+            
+            selectedCards.value = [];
+            isProcessing.value = false;
+
+            // Kiểm tra xem vòng hiện tại đã xong chưa
+            const currentRoundCards = rounds.value[currentRoundIndex.value];
+            if (currentRoundCards.every(c => c.isMatched)) {
+                
+                // Nếu ĐÃ XONG VÒNG HIỆN TẠI
+                setTimeout(() => {
+                    if (currentRoundIndex.value < rounds.value.length - 1) {
+                        // CHUYỂN SANG VÒNG TIẾP THEO
+                        currentRoundIndex.value++;
+                    } else {
+                        // HOÀN THÀNH TOÀN BỘ GAME
+                        emit('next', { 
+                            isCorrect: true, 
+                            stats: { 
+                                totalAttempts: totalAttempts.value, 
+                                correctCount: totalCorrectMatches.value 
+                            } 
+                        });
+                    }
+                }, 1000);
+            }
+        }, 500);
     } else {
-      // --- SAI: ÚP LẠI ---
-      setTimeout(() => {
-        card1.isFlipped = false;
-        card2.isFlipped = false;
-        selectedCards.value = [];
-        isProcessing.value = false;
-        // Play sound fail
-        // playSound('wrong');
-      }, 1000); // Cho bé xem 1s rồi mới úp
+        card1.isError = true;
+        card2.isError = true;
+        setTimeout(() => {
+            card1.isError = false;
+            card2.isError = false;
+            selectedCards.value = [];
+            isProcessing.value = false;
+        }, 1000);
     }
-  }
 };
 </script>
 
 <style scoped>
-/* --- 3D FLIP EFFECT CSS --- */
-.perspective-container {
-  perspective: 1000px;
+/* Animation cho danh sách thẻ (Vue TransitionGroup) */
+.list-enter-active,
+.list-leave-active {
+  transition: all 0.5s ease;
+}
+.list-enter-from,
+.list-leave-to {
+  opacity: 0;
+  transform: translateY(30px);
 }
 
-.transform-style-3d {
-  transform-style: preserve-3d;
+/* Các animation cũ */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
 }
+.animate-shake { animation: shake 0.3s ease-in-out; }
 
-.backface-hidden {
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-}
-
-.rotate-y-180 {
-  transform: rotateY(180deg);
-}
-
-/* Animation Feedback */
-@keyframes bounceIn {
+@keyframes scaleIn {
   0% { transform: scale(0); opacity: 0; }
-  60% { transform: scale(1.2); opacity: 1; }
-  100% { transform: scale(1); }
+  100% { transform: scale(1); opacity: 1; }
 }
-.animate-bounce-in {
-  animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
-}
+.animate-scale-in { animation: scaleIn 0.3s ease-out forwards; }
 </style>

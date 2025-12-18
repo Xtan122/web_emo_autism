@@ -157,7 +157,7 @@ const goBack = () => {
   router.push('/app');
 };
 
-const logLessonActivity = async (isCorrect, questionId = null, chosenEmotionId = null, duration = null) => {
+const logLessonActivity = async (isCorrect, questionId = null, chosenEmotionId = null, duration = null, stats = null) => {
     try {
         const payload = {
             lessonType: lessonType,
@@ -165,10 +165,12 @@ const logLessonActivity = async (isCorrect, questionId = null, chosenEmotionId =
             isCorrect: isCorrect,
             questionId: questionId,
             chosenEmotionId: chosenEmotionId,
-            duration: duration
+            duration: duration,
+            // Gửi thêm stats nếu có (cho Matching)
+            totalAttempts: stats ? stats.totalAttempts : 0,
+            correctCount: stats ? stats.correctCount : 0
         };
         
-        // 🔥 SỬA URL TẠI ĐÂY: đổi 'progress' thành 'progress-map'
         await axios.post('http://localhost:3000/api/progress-map/log', payload);
         
     } catch (error) {
@@ -176,35 +178,45 @@ const logLessonActivity = async (isCorrect, questionId = null, chosenEmotionId =
     }
 };
 
-// --- METHODS ---
-// ...
+const handleNext = async (result, logData = {}) => {
+    // result có thể là boolean (Flashcard/Context) hoặc Object (Matching)
+    let isCorrect = result;
+    let stats = null;
 
-const handleNext = async (isCorrect, logData = {}) => {
-    // 1. Luôn ghi log dù đúng hay sai
-    if (lessonType !== 'matching' && lessonType !== 'emotion_training' && lessonType !== 'ai' && currentQuestion.value) {
-        await logLessonActivity(
-            isCorrect, // Truyền true/false thực tế
-            currentQuestion.value.id, 
-            logData.chosenEmotionId
-        );
+    // Xử lý dữ liệu từ Matching Game gửi lên
+    if (typeof result === 'object' && result !== null) {
+        isCorrect = result.isCorrect;
+        stats = result.stats; // { totalAttempts, correctCount }
     }
 
-    // 2. Xử lý Flashcard/Context: Dù đúng hay sai cũng chuyển câu
+    // 1. Flashcard & Context: Log từng câu
     if (lessonType === 'flashcard' || lessonType === 'context') {
+        if (currentQuestion.value) {
+            // Log dù đúng hay sai
+            await logLessonActivity(
+                isCorrect, 
+                currentQuestion.value.id, 
+                logData.chosenEmotionId
+            );
+        }
+
+        // Luôn chuyển câu tiếp theo (không cho retry)
         if (currentIndex.value < questions.value.length - 1) {
-            // Chuyển câu tiếp theo sau 1 khoảng delay nhỏ (để UI kịp hiển thị hiệu ứng ở component con)
             setTimeout(() => {
                 currentIndex.value++;
             }, 500); 
         } else {
-            // Hết câu hỏi -> Kết thúc bài
             finishLesson();
         }
     } 
     
-    // 3. Xử lý Matching/Training/AI (Giữ nguyên logic cũ vì loại này chơi 1 lượt là xong)
-    else if (isCorrect) { 
-        finishLesson();
+    // 2. Matching / Training / AI: Log 1 lần khi xong
+    else {
+        if (isCorrect) {
+            // Truyền stats vào hàm log
+            await logLessonActivity(true, 0, null, null, stats);
+            finishLesson();
+        }
     }
 };
 

@@ -3,21 +3,20 @@ import db from '../config/db.js';
 
 export const getEmotionTrainingLessons = async (req, res) => {
     try {
-        // 🔥 FIX: Lấy level từ PATH PARAMETER (req.params.level)
         const level = req.params.level;
 
         if (!level) {
-            return res.status(400).json({ message: "Thiếu tham số 'level' trong đường dẫn." });
+            return res.status(400).json({ message: "Thiếu tham số 'level'." });
         }
 
         const query = `
             SELECT 
-            lt.id,
-            lt.instruction,
-            lt.success_message,
-            lt.tips,
-            m.url AS guide_image_url,
-            e.name AS target_emotion_name
+                lt.id,
+                lt.instruction,       -- Lấy cột instruction
+                lt.success_message,
+                lt.tips,
+                m.url AS guide_image_url,
+                e.name AS target_emotion_name
             FROM lesson_training_ai lt
             JOIN emotion e ON lt.target_emotion_id = e.id
             LEFT JOIN media_asset m ON lt.media_guide_id = m.id
@@ -25,17 +24,21 @@ export const getEmotionTrainingLessons = async (req, res) => {
             AND lt.emotion_group_id = ?
         `;
 
-        // Truyền level vào truy vấn
         const [rows] = await db.query(query, [level]);
 
-        // Map dữ liệu sang đúng tên props mà component EmotionTraining.vue đang dùng
+        // Map dữ liệu trả về cho Frontend
         const result = rows.map(row => ({
             id: row.id,
             guideImage: row.guide_image_url, 
-            guideText: row.guide_text, 
-            successMessage: row.success_message, 
-            tips: row.tips, 
-            targetEmotion: row.target_emotion_name
+            
+            // 🔥 SỬA 1: Map đúng cột 'instruction' từ SQL
+            instruction: row.instruction, 
+            
+            successMessage: row.success_message,
+            tips: row.tips,
+
+            // 🔥 SỬA 2: Đổi tên key thành 'emotion_name' để khớp với Frontend VueJS
+            emotion_name: row.target_emotion_name 
         }));
 
         res.status(200).json(result);
@@ -44,4 +47,4 @@ export const getEmotionTrainingLessons = async (req, res) => {
         console.error("Lỗi lấy dữ liệu Emotion Training:", error);
         res.status(500).json({ message: "Lỗi server" });
     }
-};  
+};

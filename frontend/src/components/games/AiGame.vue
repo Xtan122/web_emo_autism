@@ -11,7 +11,6 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-auto lg:h-[500px]">
       
       <div class="lg:col-span-2 h-full flex flex-col gap-4">
-        
         <div class="relative w-full flex-1 bg-black rounded-3xl overflow-hidden shadow-xl border-4 border-white ring-1 ring-slate-200">
           <iframe 
             v-if="data.videoThumbnail"
@@ -22,7 +21,6 @@
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
             allowfullscreen>
           </iframe>
-          
           <div v-else class="w-full h-full flex items-center justify-center text-white">
             Đang tải video...
           </div>
@@ -41,15 +39,16 @@
       <div class="lg:col-span-1 h-full flex flex-col gap-4">
         
         <div class="h-[40%] bg-slate-800 rounded-3xl overflow-hidden shadow-lg border-4 border-slate-200 relative">
-          <video id="user-camera" class="w-full h-full object-cover transform -scale-x-100" autoplay muted playsinline></video>
+          <video id="user-camera" ref="videoRef" class="w-full h-full object-cover transform -scale-x-100" autoplay muted playsinline></video>
+          <canvas ref="canvasRef" class="hidden"></canvas>
           
           <div class="absolute top-3 right-3 flex items-center gap-2 bg-black/40 px-2 py-1 rounded-md backdrop-blur">
             <div class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-            <span class="text-white text-[10px] font-bold tracking-widest">REC</span>
+            <span class="text-white text-[10px] font-bold tracking-widest">AI REC</span>
           </div>
 
-          <div class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 z-0 pointer-events-none">
-            <i class="fas fa-camera text-3xl mb-1 opacity-50"></i>
+          <div v-if="!isConnected" class="absolute inset-0 flex items-center justify-center bg-black/60 z-10">
+             <span class="text-white text-xs animate-pulse">Đang kết nối AI...</span>
           </div>
         </div>
 
@@ -57,11 +56,13 @@
           
           <div class="flex justify-between items-center mb-2 border-b pb-2">
             <h3 class="font-bold text-slate-700 text-sm">📊 Cảm xúc Real-time</h3>
-            <span class="text-xs font-bold text-green-600 animate-pulse">AI Active</span>
+            <span class="text-xs font-bold" :class="isConnected ? 'text-green-600' : 'text-red-400'">
+                {{ isConnected ? 'Online' : 'Offline' }}
+            </span>
           </div>
 
           <div class="flex-1 flex items-end justify-between gap-2 px-1 pb-2">
-            <div v-for="(value, key) in mockStats" :key="key" class="flex flex-col items-center gap-1 flex-1 group h-full justify-end">
+            <div v-for="(value, key) in emotionStats" :key="key" class="flex flex-col items-center gap-1 flex-1 group h-full justify-end">
               <span class="text-[10px] font-bold text-slate-400 group-hover:text-slate-600 transition-colors">{{ value }}%</span>
               
               <div class="w-full bg-slate-100 rounded-t-md relative overflow-hidden transition-all duration-500 ease-out" style="height: 100%">
@@ -93,16 +94,20 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue';
+import axios from 'axios';
 
 const props = defineProps(['data']);
 const emit = defineEmits(['next']);
 
-// Dữ liệu giả lập
-const mockStats = ref({
-  happy: 10, sad: 5, fear: 5, angry: 5, surprised: 5, disgust: 5
-});
+const videoRef = ref(null);
+const canvasRef = ref(null);
+const isConnected = ref(false);
+let analyzeInterval = null;
 
-let intervalTimer = null;
+// State chứa dữ liệu cảm xúc thật (Initial = 0)
+const emotionStats = ref({
+  happy: 0, sad: 0, fear: 0, angry: 0, surprised: 0, disgust: 0
+});
 
 // Helper màu sắc & nhãn
 const getColorClass = (key) => {
@@ -123,30 +128,61 @@ const getLabel = (key) => {
   return map[key];
 };
 
+// --- HÀM GỬI ẢNH LÊN PYTHON SERVER ---
+const analyzeFrame = async () => {
+  if (!videoRef.value || !canvasRef.value) return;
+
+  const video = videoRef.value;
+  const canvas = canvasRef.value;
+  const context = canvas.getContext('2d');
+
+  // Chỉ chụp khi video đang chạy
+  if (video.readyState === video.HAVE_ENOUGH_DATA) {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    // Nén ảnh JPEG chất lượng 0.6 để gửi nhanh
+    const imageData = canvas.toDataURL('image/jpeg', 0.6);
+
+    try {
+      // GỌI API PYTHON (Port 5000)
+      const response = await axios.post('http://localhost:5000/analyze', {
+        image: imageData
+      });
+
+      if (response.data.status === 'success') {
+        isConnected.value = true;
+        // Cập nhật stats từ Server trả về
+        // Server trả về: { happy: 80, sad: 5... }
+        emotionStats.value = response.data.emotions;
+      } else {
+        // Nếu không thấy mặt (status: no_face), giữ nguyên hoặc reset nhẹ
+        // console.log("Không tìm thấy khuôn mặt");
+      }
+    } catch (error) {
+      console.error("Lỗi AI Server:", error);
+      isConnected.value = false;
+    }
+  }
+};
+
 // Lifecycle
 onMounted(() => {
-  const videoEl = document.getElementById('user-camera');
+  // 1. Mở Camera
   if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
     navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
-      if(videoEl) videoEl.srcObject = stream;
+      if(videoRef.value) videoRef.value.srcObject = stream;
     }).catch(e => console.log("Lỗi camera:", e));
   }
 
-  intervalTimer = setInterval(() => {
-    mockStats.value = {
-      happy: Math.floor(Math.random() * 40) + 10,
-      sad: Math.floor(Math.random() * 20),
-      fear: Math.floor(Math.random() * 10),
-      angry: Math.floor(Math.random() * 10),
-      surprised: Math.floor(Math.random() * 30) + 5,
-      disgust: Math.floor(Math.random() * 10)
-    };
-  }, 800);
+  // 2. Chạy Interval gọi API (500ms / lần = 2 FPS)
+  analyzeInterval = setInterval(analyzeFrame, 500);
 });
 
 onUnmounted(() => {
-  if(intervalTimer) clearInterval(intervalTimer);
-  const videoEl = document.getElementById('user-camera');
+  if(analyzeInterval) clearInterval(analyzeInterval);
+  const videoEl = videoRef.value;
   if (videoEl && videoEl.srcObject) {
     videoEl.srcObject.getTracks().forEach(t => t.stop());
   }
@@ -154,9 +190,13 @@ onUnmounted(() => {
 
 const currentDominantEmotion = computed(() => {
   let maxKey = 'happy';
-  let maxValue = 0;
-  for (const [key, value] of Object.entries(mockStats.value)) {
-    if (value > maxValue) { maxValue = value; maxKey = key; }
+  let maxValue = -1;
+  // Tìm key có value lớn nhất trong emotionStats
+  for (const [key, value] of Object.entries(emotionStats.value)) {
+    if (value > maxValue) { 
+        maxValue = value; 
+        maxKey = key; 
+    }
   }
   return getLabel(maxKey);
 });
@@ -165,4 +205,5 @@ const currentDominantEmotion = computed(() => {
 <style scoped>
 .animate-fade-in { animation: fadeIn 0.6s ease-out; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.hidden { display: none; }
 </style>
