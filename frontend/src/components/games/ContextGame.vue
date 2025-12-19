@@ -78,7 +78,6 @@ const getEmoji = (text) => {
     return '🤔';
 }
 
-// 🔥 LOGIC CLASS MỚI: TẠO HIỆU ỨNG 3D VÀ MÀU SẮC RÕ RÀNG
 const getButtonClass = (opt) => {
     // 1. Trạng thái ĐÚNG (Luôn hiện xanh khi đã có kết quả)
     // Giúp trẻ thấy đáp án đúng kể cả khi chọn sai

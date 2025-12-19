@@ -83,23 +83,17 @@ const capturedImage = ref(null);
 const isAnalyzing = ref(false);
 const aiResult = ref(null);
 
-// 🔥 LẤY TARGET EMOTION TỪ DATABASE (PROPS)
-// Backend cần JOIN bảng 'emotion' để trả về cột 'emotion_name'
 const targetEmotionName = computed(() => {
-    // 1. Kiểm tra nếu backend trả về tên cảm xúc (Ví dụ: 'Vui vẻ', 'Tức giận')
     if (props.data && props.data.emotion_name) {
         return props.data.emotion_name;
     }
-    // 2. Fallback nếu dùng tên biến khác
     if (props.data && props.data.target_emotion_name) {
         return props.data.target_emotion_name;
     }
-    // 3. Nếu không có dữ liệu, trả về mặc định để tránh lỗi, nhưng log cảnh báo
     console.warn("⚠️ Thiếu emotion_name trong props data!", props.data);
     return "cảm xúc này"; 
 });
 
-// 1. KHỞI ĐỘNG CAMERA
 const startCamera = async () => {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -120,7 +114,6 @@ onUnmounted(() => {
   }
 });
 
-// 2. CHỤP ẢNH & GỌI API
 const takePhoto = async () => {
   if (!videoRef.value || !canvasRef.value) return;
 
@@ -138,13 +131,11 @@ const takePhoto = async () => {
   await analyzeImage(imageBase64);
 };
 
-// 3. GỌI GEMINI QUA BACKEND
 const analyzeImage = async (imageBase64) => {
   isAnalyzing.value = true;
   aiResult.value = null;
 
   try {
-    // Gọi API Backend
     const response = await axios.post('http://localhost:3000/api/gemini/analyze', {
       imageBase64: imageBase64,
       targetEmotion: targetEmotionName.value // 🔥 Gửi tên cảm xúc lấy từ DB lên
@@ -152,7 +143,6 @@ const analyzeImage = async (imageBase64) => {
 
     const data = response.data;
     
-    // Cập nhật kết quả hiển thị
     aiResult.value = {
         isMatch: data.isMatch,
         emoji: data.emoji || '😐',
@@ -160,7 +150,6 @@ const analyzeImage = async (imageBase64) => {
         tip: data.tip
     };
 
-    // 🔥 TỰ ĐỘNG CHUYỂN BÀI NẾU ĐÚNG
     if (data.isMatch) {
         setTimeout(() => {
             emit('next', true); 

@@ -1,16 +1,13 @@
-// backend/controllers/contextController.js
 import db from '../config/db.js';
 
 export const getContextQuestions = async (req, res) => {
     try {
-        // 🔥 LẤY LEVEL TỪ PATH PARAMETER
         const level = req.params.level;
 
         if (!level) {
             return res.status(400).json({ message: "Thiếu tham số 'level' trong đường dẫn." });
         }
 
-        // Truy vấn: Sử dụng lesson_core và lesson_option
         const query = `
             SELECT 
                 lc.id AS question_id,
@@ -30,7 +27,6 @@ export const getContextQuestions = async (req, res) => {
 
         const [rows] = await db.query(query, [level]);
 
-        // Xử lý dữ liệu: Gom nhóm các option vào cùng một câu hỏi
         const questionsMap = {};
 
         rows.forEach(row => {

@@ -1,11 +1,9 @@
-// backend/controllers/userController.js
 import db from '../config/db.js';
 
 export const getUserProfile = async (req, res) => {
     try {
-        const userId = req.user.id; // Lấy từ middleware verifyToken
+        const userId = req.user.id; 
 
-        // 1. Lấy thông tin cá nhân từ bảng user
         const [userRows] = await db.query(
             `SELECT username, email, parent_name, avatar FROM user WHERE id = ?`, 
             [userId]
@@ -16,15 +14,12 @@ export const getUserProfile = async (req, res) => {
         }
         const user = userRows[0];
 
-        // 2. Tính tổng số Sao (từ bảng log)
         const [scoreRow] = await db.query(
             `SELECT SUM(score) as total_score FROM user_activity_log WHERE user_id = ?`, 
             [userId]
         );
         const totalStars = scoreRow[0].total_score || 0;
 
-        // 3. Tính Streak (Chuỗi ngày liên tiếp)
-        // Lấy danh sách ngày đã chơi (DISTINCT) sắp xếp giảm dần
         const [dateRows] = await db.query(`
             SELECT DISTINCT DATE(answered_at) as play_date 
             FROM user_activity_log 
@@ -40,7 +35,6 @@ export const getUserProfile = async (req, res) => {
             const lastPlayDate = new Date(dateRows[0].play_date);
             lastPlayDate.setHours(0, 0, 0, 0);
 
-            // Kiểm tra xem lần chơi cuối có phải hôm nay hoặc hôm qua không
             const diffTime = today.getTime() - lastPlayDate.getTime();
             const diffDays = Math.floor(diffTime / (1000 * 3600 * 24));
 

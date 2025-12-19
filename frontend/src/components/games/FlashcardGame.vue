@@ -43,11 +43,9 @@ import { ref, watch } from 'vue';
 const props = defineProps(['data']); 
 const emit = defineEmits(['next']);
 
-// State
-const hasAnswered = ref(false); // Đã trả lời chưa (để khóa nút)
-const selectedOpt = ref(null);  // Đáp án người dùng chọn
+const hasAnswered = ref(false); 
+const selectedOpt = ref(null);  
 
-// Helper Emoji
 const getEmoji = (text) => {
     if (text.includes('Vui')) return '😊';
     if (text.includes('Buồn')) return '😢';
@@ -58,62 +56,43 @@ const getEmoji = (text) => {
     return '😐';
 }
 
-// Logic màu sắc nút bấm (QUAN TRỌNG)
 const getButtonClass = (opt) => {
     const base = "bg-white border-slate-200 text-slate-600 hover:border-blue-300 hover:bg-blue-50 hover:-translate-y-1";
     
-    // 1. Chưa chọn gì -> Style mặc định
     if (!hasAnswered.value) return base; 
-
-    // 2. Đã chọn -> Logic hiển thị kết quả:
-    
-    // A. Nếu đây là đáp án ĐÚNG -> Luôn hiện màu Xanh (để sửa lỗi cho trẻ)
     if (opt === props.data.correct) {
         return "bg-green-500 border-green-700 text-white scale-105 shadow-md"; 
     }
-
-    // B. Nếu đây là đáp án SAI mà người dùng ĐÃ CHỌN -> Hiện màu Đỏ
     if (opt === selectedOpt.value && opt !== props.data.correct) {
         return "bg-red-500 border-red-700 text-white opacity-80"; 
     }
-    
-    // C. Các đáp án còn lại -> Làm mờ đi
-    return "bg-slate-100 border-slate-200 text-slate-300 opacity-40 grayscale"; 
+        return "bg-slate-100 border-slate-200 text-slate-300 opacity-40 grayscale"; 
 }
 
-// Xử lý chọn đáp án (Chế độ Sudden Death - 1 lần chọn)
 const checkAnswer = (opt) => {
-    if (hasAnswered.value) return; // Chặn click liên tục
+    if (hasAnswered.value) return; 
     
     hasAnswered.value = true;
     selectedOpt.value = opt;
     
     const isCorrect = (opt === props.data.correct);
 
-    // Phát âm thanh feedback (Tùy chọn)
-    // if (isCorrect) playSound('correct'); else playSound('wrong');
-
-    // Đợi 1.5 giây để trẻ nhìn thấy kết quả (Màu xanh/đỏ) rồi mới chuyển câu
     setTimeout(() => {
-        // Gửi kết quả thật (true/false) về cha
         emit('next', isCorrect); 
     }, 1500); 
 }
 
-// Reset trạng thái khi câu hỏi thay đổi (Khi cha đổi props.data)
 watch(() => props.data, () => {
     hasAnswered.value = false;
     selectedOpt.value = null;
 });
 
 const playAudio = () => {
-  // Logic đọc audio
   console.log("Đọc câu hỏi:", props.data.question);
 }
 </script>
 
 <style scoped>
-/* CSS Animation cho chuyển cảnh */
 .slide-fade-enter-active {
   transition: all 0.5s ease-out;
 }

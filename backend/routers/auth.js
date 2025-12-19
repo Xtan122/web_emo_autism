@@ -1,6 +1,6 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken'; // <--- ĐÃ THÊM DÒNG NÀY ĐỂ SỬA LỖI
+import jwt from 'jsonwebtoken'; 
 import db from '../config/db.js';
 import dotenv from 'dotenv';
 
@@ -8,9 +8,6 @@ dotenv.config();
 
 const router = express.Router();
 
-// ==========================================
-// ĐĂNG KÝ (SIGN UP)
-// ==========================================
 router.post('/register', async (req, res) => {
     const { username, parent_name, email, password } = req.body;
 
@@ -43,9 +40,6 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// ==========================================
-// ĐĂNG NHẬP (LOGIN)
-// ==========================================
 router.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
@@ -67,7 +61,6 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ message: 'Email hoặc mật khẩu không đúng' });
         }
 
-        // Tạo Token (Cần import jwt ở trên cùng thì dòng này mới chạy được)
         const token = jwt.sign(
             { id: user.id, email: user.email, username: user.username }, 
             process.env.JWT_SECRET, 

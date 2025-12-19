@@ -1,9 +1,7 @@
-// backend/controllers/aiController.js
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from 'dotenv';
 dotenv.config();
 
-// Khởi tạo Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 export const analyzeEmotion = async (req, res) => {
@@ -14,19 +12,15 @@ export const analyzeEmotion = async (req, res) => {
       return res.status(400).json({ message: "Thiếu dữ liệu ảnh hoặc cảm xúc mục tiêu" });
     }
 
-    // 1. Chuẩn bị dữ liệu ảnh cho Gemini
-    // Xóa header "data:image/png;base64," nếu có
     const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "");
     
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-    // 2. Tạo Prompt (Câu lệnh)
-    // Yêu cầu trả về JSON thuần túy để Frontend dễ xử lý
     const prompt = `
       Bạn là một người bạn đồng hành để dạy trẻ tự kỷ nhận biết cảm xúc.
-      Hãy nhìn bức ảnh này. Người trong ảnh đang cố gắng thể hiện cảm xúc: "${targetEmotion}".
+      Hãy nhìn bức ảnh này. Trẻ tự kỷ trong ảnh đang cố gắng thể hiện cảm xúc: "${targetEmotion}".
       
-      Hãy phân tích biểu cảm khuôn mặt (mắt, miệng, lông mày) và so sánh với cảm xúc mục tiêu.
+      Hãy phân tích biểu cảm khuôn mặt (mắt, miệng, lông mày) của trẻ và so sánh với cảm xúc mục tiêu.
       
       Trả về kết quả dưới dạng JSON (không dùng Markdown) với cấu trúc sau:
       {
@@ -44,15 +38,12 @@ export const analyzeEmotion = async (req, res) => {
       },
     };
 
-    // 3. Gọi Gemini
     const result = await model.generateContent([prompt, imagePart]);
     const responseText = result.response.text();
 
-    // 4. Xử lý chuỗi JSON trả về (Gemini đôi khi bọc trong ```json ... ```)
     const cleanJson = responseText.replace(/```json|```/g, "").trim();
     const analysisData = JSON.parse(cleanJson);
 
-    // 5. Trả về Frontend
     res.status(200).json(analysisData);
 
   } catch (error) {

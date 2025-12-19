@@ -136,13 +136,11 @@ const analyzeFrame = async () => {
   const canvas = canvasRef.value;
   const context = canvas.getContext('2d');
 
-  // Chỉ chụp khi video đang chạy
   if (video.readyState === video.HAVE_ENOUGH_DATA) {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // Nén ảnh JPEG chất lượng 0.6 để gửi nhanh
     const imageData = canvas.toDataURL('image/jpeg', 0.6);
 
     try {
@@ -153,11 +151,8 @@ const analyzeFrame = async () => {
 
       if (response.data.status === 'success') {
         isConnected.value = true;
-        // Cập nhật stats từ Server trả về
-        // Server trả về: { happy: 80, sad: 5... }
         emotionStats.value = response.data.emotions;
       } else {
-        // Nếu không thấy mặt (status: no_face), giữ nguyên hoặc reset nhẹ
         // console.log("Không tìm thấy khuôn mặt");
       }
     } catch (error) {
@@ -176,7 +171,6 @@ onMounted(() => {
     }).catch(e => console.log("Lỗi camera:", e));
   }
 
-  // 2. Chạy Interval gọi API (500ms / lần = 2 FPS)
   analyzeInterval = setInterval(analyzeFrame, 500);
 });
 

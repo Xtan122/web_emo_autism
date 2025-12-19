@@ -113,8 +113,7 @@ const initGameRounds = (rawData) => {
         // Gộp (Flatten) thành 1 mảng các thẻ (4 thẻ)
         let roundCards = currentPairs.flat();
         
-        // 🔥 Tráo bài TRONG NỘI BỘ vòng này
-        // Để bé không đoán được vị trí, nhưng đảm bảo 4 thẻ này thuộc về nhau
+-
         shuffleArray(roundCards);
         
         chunkedRounds.push(roundCards);

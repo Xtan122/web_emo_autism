@@ -12,16 +12,13 @@ from PIL import Image
 app = Flask(__name__)
 CORS(app)
 
-# --- CẤU HÌNH ĐƯỜNG DẪN ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_DIR = os.path.join(BASE_DIR, 'ER_model')
 
 YUNET_PATH = os.path.join(MODEL_DIR, 'face_detection_yunet_2023mar.onnx')
 VIT_PATH = os.path.join(MODEL_DIR, 'vit_model.pth')
 
-# --- 1. ĐỊNH NGHĨA NHÃN & MAPPING (CẬP NHẬT THEO USER) ---
 
-# Danh sách 12 đầu ra theo đúng thứ tự Index 0 -> 11
 RAW_LABELS = [
     'dg', # 0: Genuine Disgust
     'ds', # 1: Posed Disgust
@@ -61,7 +58,6 @@ try:
 except Exception as e:
     print(f"❌ Lỗi load YuNet: {e}")
 
-# Load Emotion Model
 try:
     # Khởi tạo model với 12 đầu ra
     base_model = ViTForImageClassification.from_pretrained(

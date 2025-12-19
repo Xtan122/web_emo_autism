@@ -1,9 +1,7 @@
-// backend/controllers/aiController.js
 import db from '../config/db.js';
 
 export const getAiLessons = async (req, res) => {
     try {
-        // 🔥 LẤY LEVEL TỪ PATH PARAMETER
         const level = req.params.level;
 
         if (!level) {

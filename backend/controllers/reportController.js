@@ -1,4 +1,3 @@
-// backend/controllers/reportController.js
 import db from '../config/db.js';
 
 const getUserId = (req) => {
@@ -6,7 +5,6 @@ const getUserId = (req) => {
     return null;
 };
 
-// Helper đặt tên tiếng Việt cho loại bài học
 function getLessonTypeName(code) {
     const map = {
         'FLASHCARD': 'Học thẻ Flashcard',
@@ -26,19 +24,12 @@ export const getUserReport = async (req, res) => {
 
         conn = await db.getConnection();
 
-        // ---------------------------------------------------------
-        // 1. STATS CƠ BẢN (Giữ nguyên logic cũ hoặc tính từ stat)
-        // ---------------------------------------------------------
-        // Tính tổng sao (total_score) từ log
         const [scoreRow] = await conn.query(`SELECT SUM(score) as total_score FROM user_activity_log WHERE user_id = ?`, [userId]);
         const totalStars = scoreRow[0].total_score || 0;
 
-        // Tính chuỗi ngày (Streak) - Code rút gọn cho ngắn
-        // (Bạn có thể giữ nguyên logic tính streak dài ở file cũ nếu muốn chính xác cao)
         const [dateRows] = await conn.query(`SELECT COUNT(DISTINCT DATE(answered_at)) as days FROM user_activity_log WHERE user_id = ?`, [userId]);
         const streak = dateRows[0].days || 0; 
 
-        // Tính độ chính xác tổng thể (Toàn bộ quá trình)
         const [accRow] = await conn.query(`
             SELECT SUM(total_correct_count) as total_correct, SUM(total_play) as total_play 
             FROM user_progress_stat WHERE user_id = ?
@@ -47,11 +38,6 @@ export const getUserReport = async (req, res) => {
             ? Math.round((accRow[0].total_correct / accRow[0].total_play) * 100) 
             : 0;
 
-        // ---------------------------------------------------------
-        // 2. DATA RADAR CHART: THEO CẤP ĐỘ (EMOTION GROUP) [SỬA ĐỔI]
-        // ---------------------------------------------------------
-        // Yêu cầu: Group by emotion_group_id -> Tính % đúng
-        // Dùng LEFT JOIN để đảm bảo hiện đủ Cấp độ 1, 2, 3 dù chưa chơi
         const [radarRows] = await conn.query(`
             SELECT 
                 eg.name,
@@ -73,10 +59,6 @@ export const getUserReport = async (req, res) => {
             };
         });
 
-        // ---------------------------------------------------------
-        // 3. DATA KỸ NĂNG: THEO LOẠI BÀI HỌC (LESSON TYPE) [SỬA ĐỔI]
-        // ---------------------------------------------------------
-        // Yêu cầu: Group by lesson_type_id -> Tính % đúng
         const [skillRows] = await conn.query(`
             SELECT 
                 lt.code,
@@ -100,9 +82,7 @@ export const getUserReport = async (req, res) => {
             };
         });
 
-        // ---------------------------------------------------------
-        // 4. LOG HOẠT ĐỘNG GẦN ĐÂY (Giữ nguyên)
-        // ---------------------------------------------------------
+        //  LOG HOẠT ĐỘNG GẦN ĐÂY (Giữ nguyên)
         const [recentLogs] = await conn.query(`
             SELECT lt.name as lesson_type, ual.score, ual.answered_at, ual.is_correct
             FROM user_activity_log ual
@@ -115,11 +95,10 @@ export const getUserReport = async (req, res) => {
         res.status(200).json({
             stats: {
                 stars: totalStars,
-                streak: streak, // Hoặc logic streak phức tạp cũ của bạn
+                streak: streak, 
                 accuracy: overallAccuracy,
-                dominantEmotion: "Đang cập nhật" // Bỏ hoặc tính lại nếu cần
+                dominantEmotion: "Đang cập nhật" 
             },
-            // Trả về mảng đối tượng cho Radar (Label + Score)
             radar: radarChartData, 
             skills: skillData,
             logs: recentLogs

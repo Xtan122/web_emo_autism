@@ -1,9 +1,7 @@
-// backend/controllers/flashcardController.js
 import db from '../config/db.js';
 
 export const getFlashcards = async (req, res) => {
     try {
-        // 🔥 LẤY LEVEL TỪ PATH PARAMETER
         const level = req.params.level; 
 
         if (!level) {
@@ -27,7 +25,6 @@ export const getFlashcards = async (req, res) => {
 
         const [rows] = await db.query(query, [level]);
 
-        // ... (Logic gom nhóm giữ nguyên) ...
         const questionsMap = {};
         rows.forEach(row => {
             if (!questionsMap[row.question_id]) {
