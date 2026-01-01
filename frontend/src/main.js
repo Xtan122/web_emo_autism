@@ -8,7 +8,8 @@ import router from './router'
 
 // --- CẤU HÌNH AXIOS (QUAN TRỌNG) ---
 // Đặt URL mặc định cho backend
-axios.defaults.baseURL = 'http://localhost:3000';
+axios.defaults.baseURL = 'http://44.204.122.122:3000';
+
 
 // Cấu hình Interceptor: Tự động gắn Token vào mọi request
 axios.interceptors.request.use(

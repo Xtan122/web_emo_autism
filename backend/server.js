@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import './config/s3.js'; // Kết nối S3 khi start app
 
 import authRoutes from './routers/auth.js';
 import userRoutes from './routers/user.js';
@@ -11,7 +12,8 @@ import emotionTrainingRoutes from './routers/emotionTraining.js';
 import aiRoutes from './routers/ai.js';
 import progressRoutes from './routers/progress.js';
 import reportRoutes from './routers/report.js';
-import geminiRoutes from './routers/gemini.js'
+import geminiRoutes from './routers/gemini.js';
+import uploadRoutes from './routers/upload.js';
 dotenv.config();
 
 const app = express();
@@ -31,7 +33,8 @@ app.use('/api/context', contextRoutes);
 app.use('/api/emotion-training', emotionTrainingRoutes);
 app.use('/api/ai', aiRoutes); 
 app.use('/api/report', reportRoutes);
-app.use('/api/gemini',geminiRoutes)
+app.use('/api/gemini', geminiRoutes);
+app.use('/api/upload', uploadRoutes);
 
 app.get('/', (req, res) => {
     res.send('Autism Learning App Backend is running...');
